@@ -1,264 +1,215 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, LoginCredentials, UserRole } from '@/types';
-import { apiClient, ApiError } from '@/lib/api-client';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from '@/hooks/use-toast';
-import { isClient } from '@/lib/utils';
+import {
+  AuthState,
+  AuthContextValue,
+  LoginFormData,
+  SignupFormData,
+  User,
+} from '@/types/auth';
+import authAPI from '@/lib/auth-api';
 import { LoadingScreen } from '@/components/ui/loading';
+import { ApiTransformer } from '@/lib/api-transformer';
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  register: (userData: any) => Promise<void>;
-  checkPermission: (allowedRoles: UserRole[]) => boolean;
-  hasRole: (role: UserRole) => boolean;
-  refreshUser: () => Promise<void>;
-}
+// Auth Actions
+type AuthAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_USER'; payload: User }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'LOGOUT' };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+// Auth Reducer
+const authReducer = (state: AuthState, action: AuthAction): AuthState => {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_USER':
+      return { ...state, user: action.payload, isAuthenticated: true };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, isLoading: false };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
+    case 'LOGIN_SUCCESS':
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      };
+    case 'LOGOUT':
+      return {
+        ...state,
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      };
+    default:
+      return state;
   }
-  return context;
 };
 
-interface AuthProviderProps {
-  children: React.ReactNode;
-}
+// Initial state
+const initialState: AuthState = {
+  isAuthenticated: false,
+  user: null,
+  token: null,
+  isLoading: true,
+  error: null,
+};
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+// Create context
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Auth Provider Component
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(authReducer, initialState);
   const router = useRouter();
 
-  const isAuthenticated = !!user && !!apiClient.getToken();
-
-  // Handle hydration
+  // Initialize auth state on mount
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Initialize authentication state
-  useEffect(() => {
-    if (!mounted) return;
-
     const initializeAuth = async () => {
       try {
-        const token = apiClient.getToken();
+        const token = authAPI.getToken();
+
         if (token) {
-          const userData = await apiClient.getProfile();
-          setUser(userData);
+          // Verify token and get user profile
+          const user = await authAPI.getProfile(token);
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
         }
       } catch (error) {
-        console.error('Failed to get user profile:', error);
-        // Token might be expired, clear it
-        apiClient.clearToken();
-        setUser(null);
+        // Token is invalid, clear it
+        authAPI.clearToken();
+        console.error('Auth initialization error:', error);
       } finally {
-        setIsLoading(false);
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
 
     initializeAuth();
-  }, [mounted]);
+  }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  // Login function
+  const login = async (formData: LoginFormData) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'CLEAR_ERROR' });
+
     try {
-      setIsLoading(true);
-      const response = await apiClient.login(credentials);
-      setUser(response.data.user);
+      const response = await authAPI.login({
+        username: formData.username,
+        password: formData.password,
+      });
 
-      if (isClient()) {
-        toast({
-          title: 'Login successful',
-          description: 'Welcome back!',
-        });
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-      if (isClient() && error instanceof ApiError) {
-        toast({
-          title: 'Login failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else if (isClient()) {
-        toast({
-          title: 'Login failed',
-          description: 'An unexpected error occurred',
-          variant: 'destructive',
-        });
-      }
-      throw error;
+      const { user, token } = response;
+      authAPI.setToken(token);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+
+      // Redirect to dashboard
+      router.push('/');
+    } catch (error: unknown) {
+      const errorMessage = ApiTransformer.transformErrorForUser(error);
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
+    }
+  };
+
+  // Signup function
+  const signup = async (formData: SignupFormData) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'CLEAR_ERROR' });
+
+    try {
+      const response = await authAPI.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        surname: formData.surname,
+      });
+
+      const { user, token } = response;
+      authAPI.setToken(token);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+
+      // Redirect to dashboard
+      router.push('/');
+    } catch (error: unknown) {
+      const errorMessage = ApiTransformer.transformErrorForUser(error);
+      dispatch({
+        type: 'SET_ERROR',
+        payload: errorMessage,
+      });
+    }
+  };
+
+  // Logout function
+  const logout = () => {
+    authAPI.clearToken();
+    dispatch({ type: 'LOGOUT' });
+    router.push('/login');
+  };
+
+  // Google Auth function
+  const googleAuth = () => {
+    window.location.href = authAPI.getGoogleAuthUrl();
+  };
+
+  // Reset password function
+  const resetPassword = async (email: string) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'CLEAR_ERROR' });
+
+    try {
+      await authAPI.forgotPassword(email);
+      // Handle success (show success message)
+    } catch (error: unknown) {
+      const errorMessage = ApiTransformer.transformErrorForUser(error);
+      dispatch({
+        type: 'SET_ERROR',
+        payload: errorMessage,
+      });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
-  const register = async (userData: any) => {
-    try {
-      setIsLoading(true);
-      const response = await apiClient.register(userData);
-      setUser(response.data.user);
-
-      if (isClient()) {
-        toast({
-          title: 'Registration successful',
-          description: 'Welcome to Timesheet Management!',
-        });
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Registration failed:', error);
-      if (isClient() && error instanceof ApiError) {
-        toast({
-          title: 'Registration failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else if (isClient()) {
-        toast({
-          title: 'Registration failed',
-          description: 'An unexpected error occurred',
-          variant: 'destructive',
-        });
-      }
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  // Clear error function
+  const clearError = () => {
+    dispatch({ type: 'CLEAR_ERROR' });
   };
 
-  const logout = async () => {
-    try {
-      await apiClient.logout();
-      setUser(null);
-
-      if (isClient()) {
-        toast({
-          title: 'Logged out',
-          description: 'You have been successfully logged out',
-        });
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Even if logout fails, clear local state
-      setUser(null);
-      apiClient.clearToken();
-
-      if (isClient()) {
-        router.push('/login');
-      }
-    }
-  };
-
-  const checkPermission = (allowedRoles: UserRole[]): boolean => {
-    if (!user || !user.role) return false;
-    return allowedRoles.includes(user.role.role_name);
-  };
-
-  const hasRole = (role: UserRole): boolean => {
-    if (!user || !user.role) return false;
-    return user.role.role_name === role;
-  };
-
-  const refreshUser = async () => {
-    try {
-      const userData = await apiClient.getProfile();
-      setUser(userData);
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-      // If refresh fails, user might need to login again
-      if (error instanceof ApiError && error.isAuthError) {
-        await logout();
-      }
-    }
-  };
-
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated,
+  // Context value
+  const contextValue: AuthContextValue = {
+    authState: state,
     login,
+    signup,
     logout,
-    register,
-    checkPermission,
-    hasRole,
-    refreshUser,
+    googleAuth,
+    resetPassword,
+    clearError,
   };
 
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return <LoadingScreen message="Initializing..." />;
+  // Show loading screen during initial auth check
+  if (state.isLoading) {
+    return <LoadingScreen />;
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
+}
 
-// Higher-order component for protecting routes
-export const withAuth = <P extends object>(
-  Component: React.ComponentType<P>,
-  allowedRoles?: UserRole[],
-) => {
-  return function ProtectedComponent(props: P) {
-    const { user, isLoading, isAuthenticated, checkPermission } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-      if (!isLoading) {
-        if (!isAuthenticated) {
-          router.push('/login');
-          return;
-        }
-
-        if (allowedRoles && !checkPermission(allowedRoles)) {
-          router.push('/unauthorized');
-          return;
-        }
-      }
-    }, [isLoading, isAuthenticated, user, router, checkPermission]);
-
-    if (isLoading) {
-      return <LoadingScreen message="Authenticating..." />;
-    }
-
-    if (!isAuthenticated) {
-      return null;
-    }
-
-    if (allowedRoles && !checkPermission(allowedRoles)) {
-      return null;
-    }
-
-    return <Component {...props} />;
-  };
-};
-
-// Hook for checking permissions
-export const usePermission = () => {
-  const { checkPermission, hasRole } = useAuth();
-
-  return {
-    checkPermission,
-    hasRole,
-    canView: (roles: UserRole[]) => checkPermission(roles),
-    canEdit: (roles: UserRole[]) => checkPermission(roles),
-    canDelete: (roles: UserRole[]) => checkPermission(roles),
-    canApprove: (roles: UserRole[]) => checkPermission(roles),
-    isAdmin: () => hasRole('ADMIN'),
-    isHR: () => hasRole('HR'),
-    isPM: () => hasRole('PM'),
-    isUser: () => hasRole('USER'),
-  };
-};
+// Custom hook to use auth context
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
