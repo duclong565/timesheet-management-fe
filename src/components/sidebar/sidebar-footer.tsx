@@ -24,6 +24,9 @@ import {
 import { User } from '@/types/sidebar';
 import { sidebarConfig } from '@/config/sidebar';
 import { useAuth } from '@/contexts/auth-context';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useState } from 'react';
+import { extractUserData, hasValidUserData } from '@/lib/user-utils';
 
 interface AppSidebarFooterProps {
   user?: User;
@@ -31,22 +34,52 @@ interface AppSidebarFooterProps {
 
 export function AppSidebarFooter({ user: propUser }: AppSidebarFooterProps) {
   const { authState, logout } = useAuth();
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Use authenticated user data or fallback to prop/config
-  const user = authState.user
-    ? {
-        name:
-          authState.user.name && authState.user.surname
-            ? `${authState.user.name} ${authState.user.surname}`.trim()
-            : authState.user.username,
-        email: authState.user.email,
-      }
-    : propUser ||
-      sidebarConfig.user || { name: 'John Doe', email: 'john@example.com' };
+  // Handle hydration properly
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Show loading state during SSR, initial load, or when auth is loading
+  const isLoading = !isHydrated || authState.isLoading;
+
+  // Simplified validation using the utility function
+  const hasValidUser =
+    authState.isAuthenticated && hasValidUserData(authState.user);
+  const shouldShowLoading = isLoading || !hasValidUser;
+
+  if (shouldShowLoading) {
+    return (
+      <SidebarFooter className="border-t p-4">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <div className="flex items-center gap-2 w-full p-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-1 group-data-[collapsible=icon]:hidden">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    );
+  }
+
+  // Extract user data with fallbacks
+  const userData = extractUserData(authState.user);
+  const user = userData ||
+    propUser ||
+    sidebarConfig.user || {
+      name: 'Guest User',
+      email: 'guest@example.com',
+    };
 
   const handleLogout = () => {
     logout();
   };
+
   return (
     <SidebarFooter className="border-t p-4">
       <SidebarMenu>

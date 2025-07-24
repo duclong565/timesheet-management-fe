@@ -209,7 +209,7 @@ export const sidebarConfig: SidebarConfig = {
   logo: Clock,
   navItems: mainNavItems,
   user: {
-    name: 'John Doe',
-    email: 'john@example.com',
+    name: 'Xuan An',
+    email: 'vuxuan.vxan05@nccplus.com',
   },
 };

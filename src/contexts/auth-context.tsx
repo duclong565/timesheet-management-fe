@@ -10,6 +10,7 @@ import {
   User,
 } from '@/types/auth';
 import authAPI from '@/lib/auth-api';
+import { apiClient } from '@/lib/api-client';
 import { LoadingScreen } from '@/components/ui/loading';
 import { ApiTransformer } from '@/lib/api-transformer';
 
@@ -20,7 +21,8 @@ type AuthAction =
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
-  | { type: 'LOGOUT' };
+  | { type: 'LOGOUT' }
+  | { type: 'SET_LOGIN_STATUS'; payload: 'login' | 'register' | null };
 
 // Auth Reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
@@ -51,6 +53,8 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         isLoading: false,
         error: null,
       };
+    case 'SET_LOGIN_STATUS':
+      return { ...state, loginStatus: action.payload };
     default:
       return state;
   }
@@ -63,6 +67,7 @@ const initialState: AuthState = {
   token: null,
   isLoading: true,
   error: null,
+  loginStatus: null,
 };
 
 // Create context
@@ -82,6 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (token) {
           // Verify token and get user profile
           const user = await authAPI.getProfile(token);
+          // Sync token with main API client
+          apiClient.setToken(token);
           dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
         }
       } catch (error) {
@@ -109,7 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { user, token } = response;
       authAPI.setToken(token);
+      // Sync token with main API client
+      apiClient.setToken(token);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      dispatch({ type: 'SET_LOGIN_STATUS', payload: 'login' });
 
       // Redirect to dashboard
       router.push('/');
@@ -135,7 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { user, token } = response;
       authAPI.setToken(token);
+      // Sync token with main API client
+      apiClient.setToken(token);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      dispatch({ type: 'SET_LOGIN_STATUS', payload: 'register' });
 
       // Redirect to dashboard
       router.push('/');
@@ -151,6 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function
   const logout = () => {
     authAPI.clearToken();
+    // Clear token from main API client too
+    apiClient.clearToken();
     dispatch({ type: 'LOGOUT' });
     router.push('/login');
   };
@@ -182,6 +197,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Clear error function
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
+  };
+
+  const clearLoginStatus = () => {
+    dispatch({ type: 'SET_LOGIN_STATUS', payload: null });
   };
 
   // Context value

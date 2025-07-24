@@ -18,7 +18,7 @@ import {
   UserQuery,
   BaseQuery,
 } from '@/types';
-import { safeLocalStorage } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface PasswordChangeData {
   currentPassword: string;
@@ -89,14 +89,28 @@ interface ProfileData {
   sex?: 'MALE' | 'FEMALE' | 'OTHER';
 }
 
+// Safe localStorage utility for SSR compatibility
+function safeLocalStorage(): Storage {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  // Dummy storage for SSR
+  return {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+    clear: () => {},
+    key: () => null,
+    length: 0,
+  } as Storage;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
 
   constructor() {
-    this.baseURL =
-      process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:3000/time-management';
+    this.baseURL = 'http://localhost:3000/time-management';
 
     // Initialize token from localStorage if available
     const storage = safeLocalStorage();
@@ -142,11 +156,23 @@ class ApiClient {
       ...options,
     };
 
+    console.log('API Request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!this.token,
+      headers: config.headers,
+    });
+
     try {
       const response = await fetch(url, config);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('API Error:', {
+          status: response.status,
+          url,
+          error: errorData,
+        });
         throw new ApiError(
           errorData.message || 'An error occurred',
           response.status,
@@ -155,9 +181,15 @@ class ApiClient {
       }
 
       const data = await response.json();
+      console.log('API Success:', { url, data });
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.isAuthError) {
+          toast.error('Your session has expired. Please log in again.');
+          this.clearToken();
+          // Optionally redirect to login page here
+        }
         throw error;
       }
 

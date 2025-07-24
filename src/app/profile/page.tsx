@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,71 +13,13 @@ import {
   Building,
   Briefcase,
 } from 'lucide-react';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  surname: string;
-  role: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  branch?: {
-    id: string;
-    branch_name: string;
-  };
-  position?: {
-    id: string;
-    position_name: string;
-  };
-}
+import { useProfile } from '@/hooks/use-profile';
+import { ProfileChangeRequestModal } from '@/components/profile-change-request-modal';
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: profile, isLoading, error, refetch } = useProfile();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        // Simulate API call for now - replace with actual API call
-        // const response = await fetch('/api/auth/profile');
-        // const data = await response.json();
-
-        // Mock data for demonstration
-        const mockProfile: UserProfile = {
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          email: 'john.doe@company.com',
-          name: 'John',
-          surname: 'Doe',
-          role: 'USER',
-          isActive: true,
-          createdAt: '2024-01-15T10:30:00.000Z',
-          updatedAt: '2024-01-15T10:30:00.000Z',
-          branch: {
-            id: 'branch-1',
-            branch_name: 'Main Office',
-          },
-          position: {
-            id: 'pos-1',
-            position_name: 'Software Developer',
-          },
-        };
-
-        setProfile(mockProfile);
-      } catch (err) {
-        setError('Failed to load profile');
-        console.error('Error fetching profile:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse">
@@ -98,11 +39,11 @@ export default function ProfilePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center text-red-600">
-              <p>{error}</p>
+              <p>{error.message || String(error)}</p>
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => window.location.reload()}
+                onClick={() => refetch()}
               >
                 Try Again
               </Button>
@@ -118,21 +59,23 @@ export default function ProfilePage() {
       <div className="container mx-auto p-6">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center text-gray-600">
-              No profile data available
-            </p>
+            <p className="text-center">No profile data available</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Invalid Date';
+    const date = new Date(dateString);
+    return isNaN(date.getTime())
+      ? 'Invalid Date'
+      : date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -154,12 +97,11 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">My Profile</h1>
-          <p className="text-gray-600 mt-1">Manage your personal information</p>
+          <p className="mt-1">Manage your personal information</p>
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Edit className="h-4 w-4" />
-          Edit Profile
-        </Button>
+        <div className="flex gap-2">
+          <ProfileChangeRequestModal profile={profile} />
+        </div>
       </div>
 
       {/* Profile Overview Card */}
@@ -175,76 +117,71 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Full Name
-                </label>
-                <p className="text-lg font-semibold">
-                  {profile.name} {profile.surname}
+                <label className="text-sm font-medium">Full Name</label>
+                <p className="text-lg font-semibold text-white">
+                  {profile.name || 'N/A'} {profile.surname || ''}
                 </p>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Email Address
-                </label>
+                <label className="text-sm font-medium">Email Address</label>
                 <div className="flex items-center gap-2 mt-1">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <p className="text-gray-800">{profile.email}</p>
+                  <p className="text-white">{profile.email || 'N/A'}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Role
-                </label>
+                <label className="text-sm font-medium">Role</label>
                 <div className="mt-1">
                   <Badge
-                    variant={getRoleBadgeVariant(profile.role)}
+                    variant={getRoleBadgeVariant(
+                      typeof profile.role === 'string'
+                        ? profile.role
+                        : profile.role?.role_name || '',
+                    )}
                     className="flex items-center gap-1 w-fit"
                   >
                     <Shield className="h-3 w-3" />
-                    {profile.role}
+                    {typeof profile.role === 'string'
+                      ? profile.role
+                      : profile.role?.role_name || 'N/A'}
                   </Badge>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              {profile.position && (
+              {profile.position && profile.position.position_name && (
                 <div>
-                  <label className="text-sm font-medium text-gray-600">
-                    Position
-                  </label>
+                  <label className="text-sm font-medium">Position</label>
                   <div className="flex items-center gap-2 mt-1">
                     <Briefcase className="h-4 w-4 text-gray-500" />
-                    <p className="text-gray-800">
+                    <p className="text-white">
                       {profile.position.position_name}
                     </p>
                   </div>
                 </div>
               )}
 
-              {profile.branch && (
+              {profile.branch && profile.branch.branch_name && (
                 <div>
-                  <label className="text-sm font-medium text-gray-600">
-                    Branch
-                  </label>
+                  <label className="text-sm font-medium">Branch</label>
                   <div className="flex items-center gap-2 mt-1">
                     <Building className="h-4 w-4 text-gray-500" />
-                    <p className="text-gray-800">
-                      {profile.branch.branch_name}
-                    </p>
+                    <p className="text-white">{profile.branch.branch_name}</p>
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Account Status
-                </label>
+                <label className="text-sm font-medium">Account Status</label>
                 <div className="mt-1">
-                  <Badge variant={profile.isActive ? 'default' : 'secondary'}>
-                    {profile.isActive ? 'Active' : 'Inactive'}
+                  <Badge
+                    variant={profile.is_active ? 'default' : 'secondary'}
+                    className="text-black"
+                  >
+                    {profile.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
               </div>
@@ -261,21 +198,61 @@ export default function ProfilePage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Member Since
-                </label>
-                <p className="text-gray-800 mt-1">
-                  {formatDate(profile.createdAt)}
+                <label className="text-sm font-medium">Member Since</label>
+                <p className="text-white mt-1">
+                  {formatDate(profile.created_at)}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">
-                  Last Updated
-                </label>
-                <p className="text-gray-800 mt-1">
-                  {formatDate(profile.updatedAt)}
+                <label className="text-sm font-medium">Last Updated</label>
+                <p className="text-white mt-1">
+                  {formatDate(profile.updated_at)}
                 </p>
               </div>
+              <div>
+                <label className="text-sm font-medium">Phone</label>
+                <p className="text-white mt-1">{profile.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Address</label>
+                <p className="text-white mt-1">{profile.address || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Sex</label>
+                <p className="text-white mt-1">{profile.sex || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">
+                  Allowed Leave Days
+                </label>
+                <p className="text-white mt-1">
+                  {profile.allowed_leavedays ?? 'N/A'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Start Date</label>
+                <p className="text-white mt-1">
+                  {formatDate(profile.start_date)}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Employee Type</label>
+                <p className="text-white mt-1">
+                  {profile.employee_type || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Level</label>
+                <p className="text-white mt-1">{profile.level || 'N/A'}</p>
+              </div>
+              {profile.trainer && (
+                <div>
+                  <label className="text-sm font-medium">Trainer</label>
+                  <p className="text-white mt-1">
+                    {profile.trainer.name} {profile.trainer.surname}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
