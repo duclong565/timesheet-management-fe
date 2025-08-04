@@ -12,7 +12,8 @@ import {
 import authAPI from '@/lib/auth-api';
 import { apiClient } from '@/lib/api-client';
 import { LoadingScreen } from '@/components/ui/loading';
-import { ApiTransformer } from '@/lib/api-transformer';
+import { ApiTransformer, AuthenticationError } from '@/lib/api-transformer';
+import { toast } from 'sonner';
 
 // Auth Actions
 type AuthAction =
@@ -21,8 +22,7 @@ type AuthAction =
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'LOGIN_SUCCESS'; payload: { user: User; token: string } }
-  | { type: 'LOGOUT' }
-  | { type: 'SET_LOGIN_STATUS'; payload: 'login' | 'register' | null };
+  | { type: 'LOGOUT' };
 
 // Auth Reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
@@ -30,31 +30,28 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_USER':
-      return { ...state, user: action.payload, isAuthenticated: true };
+      return { ...state, user: action.payload };
     case 'SET_ERROR':
-      return { ...state, error: action.payload, isLoading: false };
+      return { ...state, error: action.payload };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
     case 'LOGIN_SUCCESS':
       return {
         ...state,
+        isAuthenticated: true,
         user: action.payload.user,
         token: action.payload.token,
-        isAuthenticated: true,
-        isLoading: false,
         error: null,
+        isLoading: false,
       };
     case 'LOGOUT':
       return {
         ...state,
+        isAuthenticated: false,
         user: null,
         token: null,
-        isAuthenticated: false,
-        isLoading: false,
         error: null,
       };
-    case 'SET_LOGIN_STATUS':
-      return { ...state, loginStatus: action.payload };
     default:
       return state;
   }
@@ -67,7 +64,6 @@ const initialState: AuthState = {
   token: null,
   isLoading: true,
   error: null,
-  loginStatus: null,
 };
 
 // Create context
@@ -94,7 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         // Token is invalid, clear it
         authAPI.clearToken();
-        console.error('Auth initialization error:', error);
+        apiClient.clearToken();
+
+        // Show toast notification for authentication errors
+        if (error instanceof AuthenticationError) {
+          toast.error('Your session has expired. Please log in again.');
+        } else {
+          console.error('Auth initialization error:', error);
+        }
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -119,7 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sync token with main API client
       apiClient.setToken(token);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
-      dispatch({ type: 'SET_LOGIN_STATUS', payload: 'login' });
 
       // Redirect to dashboard
       router.push('/');
@@ -148,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sync token with main API client
       apiClient.setToken(token);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
-      dispatch({ type: 'SET_LOGIN_STATUS', payload: 'register' });
 
       // Redirect to dashboard
       router.push('/');
@@ -197,10 +198,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Clear error function
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
-
-  const clearLoginStatus = () => {
-    dispatch({ type: 'SET_LOGIN_STATUS', payload: null });
   };
 
   // Context value

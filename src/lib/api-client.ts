@@ -17,6 +17,9 @@ import {
   DashboardResponse,
   UserQuery,
   BaseQuery,
+  WeekSubmission,
+  SubmitWeekDto,
+  ApproveWeekSubmissionDto,
 } from '@/types';
 import { toast } from 'sonner';
 
@@ -70,15 +73,6 @@ interface RequestResponseData {
   request_id: string;
   status: 'APPROVED' | 'REJECTED';
   note?: string;
-}
-
-interface ComplaintData {
-  timesheet_id: string;
-  complain: string;
-}
-
-interface ComplaintReplyData {
-  complain_reply: string;
 }
 
 interface ProfileData {
@@ -361,6 +355,16 @@ class ApiClient {
   }
 
   // ====================================
+  // USER PROJECT ENDPOINTS
+  // ====================================
+
+  async getUserProjects(userId: string): Promise<ApiResponse<Project[]>> {
+    return this.get<ApiResponse<Project[]>>(
+      `/user-projects/user/${userId}/projects`,
+    );
+  }
+
+  // ====================================
   // TIMESHEET ENDPOINTS
   // ====================================
 
@@ -400,6 +404,49 @@ class ApiClient {
     return this.post<ApiResponse<Timesheet>>(
       '/timesheets/response',
       responseData,
+    );
+  }
+
+  // ====================================
+  // WEEK SUBMISSION ENDPOINTS
+  // ====================================
+
+  async submitWeekForApproval(
+    submitData: SubmitWeekDto,
+  ): Promise<ApiResponse<WeekSubmission>> {
+    return this.post<ApiResponse<WeekSubmission>>(
+      '/timesheets/submit-week',
+      submitData,
+    );
+  }
+
+  async getWeekSubmissions(): Promise<ApiResponse<WeekSubmission[]>> {
+    return this.get<ApiResponse<WeekSubmission[]>>(
+      '/timesheets/week-submissions',
+    );
+  }
+
+  async isWeekSubmitted(
+    weekStartDate: string,
+  ): Promise<ApiResponse<{ isSubmitted: boolean }>> {
+    return this.get<ApiResponse<{ isSubmitted: boolean }>>(
+      `/timesheets/week-submitted/${weekStartDate}`,
+    );
+  }
+
+  async approveWeekSubmission(
+    submissionId: string,
+    approveData: Omit<ApproveWeekSubmissionDto, 'submission_id'>,
+  ): Promise<ApiResponse<WeekSubmission>> {
+    return this.patch<ApiResponse<WeekSubmission>>(
+      `/timesheets/week-submissions/${submissionId}/approve`,
+      approveData,
+    );
+  }
+
+  async getPendingApprovals(): Promise<ApiResponse<WeekSubmission[]>> {
+    return this.get<ApiResponse<WeekSubmission[]>>(
+      '/timesheets/pending-approvals',
     );
   }
 
@@ -526,31 +573,56 @@ class ApiClient {
   }
 
   // ====================================
+  // PUNISHMENT ENDPOINTS (Timesheet-based)
+  // ====================================
+
+  async getPunishments(query?: {
+    year?: number;
+    month?: number;
+    user_id?: string;
+    has_punishment?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<any>> {
+    const params = {
+      ...query,
+      has_punishment: true, // Always filter for punishment records
+    };
+    return this.get<PaginatedResponse<any>>('/timesheets', params);
+  }
+
+  // ====================================
   // COMPLAINT ENDPOINTS
   // ====================================
 
-  async getTimesheetComplaints(
-    query?: BaseQuery,
-  ): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/timesheet-complaints', query);
+  async createComplaint(complaintData: {
+    timesheet_id: string;
+    complain: string;
+  }): Promise<ApiResponse<any>> {
+    return this.post<ApiResponse<any>>('/timesheet-complaints', complaintData);
   }
 
-  async createTimesheetComplaint(
-    complaintData: ComplaintData,
-  ): Promise<ApiResponse<unknown>> {
-    return this.post<ApiResponse<unknown>>(
-      '/timesheet-complaints',
-      complaintData,
-    );
+  async getComplaints(query?: {
+    timesheet_id?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<any>> {
+    return this.get<PaginatedResponse<any>>('/timesheet-complaints', query);
   }
 
-  async replyToComplaint(
+  async updateComplaint(
     id: string,
-    replyData: ComplaintReplyData,
-  ): Promise<ApiResponse<unknown>> {
-    return this.patch<ApiResponse<unknown>>(
-      `/timesheet-complaints/${id}/reply`,
-      replyData,
+    data: { complain: string },
+  ): Promise<ApiResponse<any>> {
+    return this.patch<ApiResponse<any>>(`/timesheet-complaints/${id}`, data);
+  }
+
+  async getComplaintsByTimesheet(
+    timesheetId: string,
+  ): Promise<ApiResponse<any>> {
+    return this.get<ApiResponse<any>>(
+      `/timesheet-complaints/timesheet/${timesheetId}`,
     );
   }
 

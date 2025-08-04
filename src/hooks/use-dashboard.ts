@@ -24,17 +24,8 @@ export function useDashboard(options?: UseDashboardOptions) {
       if (!isAuthenticated) {
         throw new Error('User not authenticated');
       }
-
-      console.log('Making dashboard API call...', {
-        isAuthenticated,
-        user: authState.user,
-        token: authState.token ? 'present' : 'missing',
-      });
-
       const response = await apiClient.getDashboard(options?.query);
-      console.log('Dashboard API Response:', response); // Debug log
 
-      // The backend response is wrapped in { success, message, data }
       return response.data as DashboardData;
     },
     enabled: options?.enabled !== false && !!isAuthenticated,

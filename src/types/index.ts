@@ -105,7 +105,7 @@ export interface Timesheet {
   project?: Project;
   task?: Task;
   date: string;
-  working_time: number;
+  working_time: number | string; // Prisma Decimal comes as string
   type: 'NORMAL' | 'OVERTIME' | 'HOLIDAY';
   note?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -113,10 +113,10 @@ export interface Timesheet {
   check_out?: string;
   actual_check_in?: string;
   actual_check_out?: string;
-  check_in_late: number;
-  check_out_early: number;
+  check_in_late: number | string; // Prisma Decimal comes as string
+  check_out_early: number | string; // Prisma Decimal comes as string
   edited_by?: User;
-  money: number;
+  money: number | string; // Prisma Decimal comes as string
   punishment?: string;
   created_at: string;
   updated_at: string;
@@ -138,6 +138,46 @@ export interface TimesheetComplaint {
   complain_reply?: string;
   created_at: string;
   updated_at: string;
+}
+
+// ====================================
+// WEEK SUBMISSION TYPES
+// ====================================
+
+export interface WeekSubmission {
+  id: string;
+  user_id: string;
+  week_start_date: string;
+  week_end_date: string;
+  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  submitted_at: string;
+  approved_by_id?: string | null;
+  approved_at?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: string;
+    name: string;
+    surname: string;
+    email: string;
+  };
+  approved_by?: {
+    id: string;
+    name: string;
+    surname: string;
+    email: string;
+  } | null;
+}
+
+export interface SubmitWeekDto {
+  week_start_date: string; // Monday date in YYYY-MM-DD format
+}
+
+export interface ApproveWeekSubmissionDto {
+  submission_id: string;
+  action: 'APPROVE' | 'REJECT';
+  rejection_reason?: string;
 }
 
 // ====================================
@@ -488,3 +528,9 @@ export interface AuditLog {
   details?: Record<string, any>;
   created_at: string;
 }
+
+// ====================================
+// REQUEST CALENDAR TYPES (New System)
+// ====================================
+
+export * from './requests';
