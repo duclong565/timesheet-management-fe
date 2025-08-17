@@ -23,12 +23,13 @@ export {
   useTimesheetBulkDelete,
 } from './use-timesheet-delete';
 
-export {
-  useTeamCalendar,
-  type TeamCalendarData,
-  type TeamCalendarDay,
-  type TeamCalendarUser,
-} from './use-team-calendar';
+export { useTeamCalendar } from './use-team-calendar';
+export type {
+  TeamCalendarData,
+  TeamCalendarDay,
+  TeamCalendarUser,
+  TeamCalendarQuery,
+} from '@/types/team-calendar';
 
 export {
   useWeekSubmission,

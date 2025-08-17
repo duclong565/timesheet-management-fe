@@ -21,6 +21,10 @@ import {
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
 } from '@/types';
+import type {
+  TeamCalendarData,
+  TeamCalendarQuery,
+} from '@/types/team-calendar';
 import { toast } from 'sonner';
 
 interface PasswordChangeData {
@@ -489,8 +493,13 @@ class ApiClient {
     return this.get<PaginatedResponse<Request>>('/requests/my-requests', query);
   }
 
-  async getTeamCalendar(query?: BaseQuery): Promise<ApiResponse<unknown>> {
-    return this.get<ApiResponse<unknown>>('/requests/team-calendar', query);
+  async getTeamCalendar(
+    query: TeamCalendarQuery,
+  ): Promise<ApiResponse<TeamCalendarData>> {
+    return this.get<ApiResponse<TeamCalendarData>>(
+      '/requests/team-calendar',
+      query,
+    );
   }
 
   // ====================================

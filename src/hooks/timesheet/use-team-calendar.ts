@@ -1,52 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import type {
+  TeamCalendarData,
+  TeamCalendarQuery,
+} from '@/types/team-calendar';
 
-export interface TeamCalendarDay {
-  day: number;
-  weekday: string;
-  isWeekend: boolean;
-}
-
-export interface TeamCalendarUser {
-  user: {
-    id: string;
-    name: string;
-    position: string;
-  };
-  days: Array<{
-    type: string;
-    absence_type: string | null;
-    project: {
-      id: string;
-      name: string;
-    } | null;
-    requestId: string;
-    period: 'FULL_DAY' | 'MORNING' | 'AFTERNOON';
-  } | null>;
-}
-
-export interface TeamCalendarData {
-  month: number;
-  year: number;
-  days: TeamCalendarDay[];
-  users: TeamCalendarUser[];
-}
-
-interface UseTeamCalendarParams {
-  month: number;
-  year: number;
-  projectId?: string;
-  branchId?: string;
-}
-
-export function useTeamCalendar(params: UseTeamCalendarParams) {
+export function useTeamCalendar(params: TeamCalendarQuery) {
   const query = useQuery({
     queryKey: ['team-calendar', params],
     queryFn: async (): Promise<TeamCalendarData> => {
       const response = await apiClient.getTeamCalendar(params);
-      return response.data as TeamCalendarData;
+      return response.data;
     },
-    enabled: !!(params.month && params.year),
+    enabled: Boolean(params.month && params.year),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
