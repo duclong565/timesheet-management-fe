@@ -21,7 +21,7 @@ export function useUserProjects(enabled: boolean = true) {
 
       // Ensure we have a valid response structure
       if (!response || typeof response !== 'object') {
-        console.error('Invalid response structure:', response);
+        console.warn('Invalid response structure:', response);
         return [];
       }
 
@@ -34,8 +34,14 @@ export function useUserProjects(enabled: boolean = true) {
       } else if (Array.isArray(response)) {
         // Direct array response
         projects = response;
+      } else if (Array.isArray(response.data?.data)) {
+        // Nested data structure: { data: { data: Project[] } }
+        projects = response.data.data;
+      } else if (Array.isArray((response as { projects?: Project[] }).projects)) {
+        // Alternate structure: { projects: Project[] }
+        projects = (response as { projects: Project[] }).projects;
       } else {
-        console.error('Unexpected response structure:', response);
+        console.warn('Unexpected response structure, returning empty array:', response);
         return [];
       }
 
