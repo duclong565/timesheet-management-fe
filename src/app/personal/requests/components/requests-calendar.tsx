@@ -13,7 +13,8 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { RequestCalendarDay } from './request-calendar-day'; // We still need this for custom rendering
-import type { RequestFilters, Request } from '@/types/requests';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 import { useRequestModalStore } from '@/stores/request-modal-store';
 
 interface RequestsCalendarProps {
@@ -37,45 +38,12 @@ export function RequestsCalendar({
     return new Date(filters.year, filters.month - 1, 1);
   }, [filters.year, filters.month]);
 
-  // Mock requests data for now - TODO: Replace with actual data fetching
-  const mockRequests: Request[] = [
-    {
-      id: '1',
-      user_id: 'user-1',
-      request_type: 'OFF',
-      period_type: 'FULL_DAY',
-      start_date: '2025-07-29',
-      end_date: '2025-07-29',
-      reason: 'Personal leave',
-      status: 'APPROVED',
-      created_at: '2025-07-25T00:00:00Z',
-      updated_at: '2025-07-25T00:00:00Z',
-    },
-    {
-      id: '2',
-      user_id: 'user-1',
-      request_type: 'OFF',
-      period_type: 'AFTERNOON',
-      start_date: '2025-07-30',
-      end_date: '2025-07-30',
-      reason: 'Medical appointment',
-      status: 'APPROVED',
-      created_at: '2025-07-26T00:00:00Z',
-      updated_at: '2025-07-26T00:00:00Z',
-    },
-    {
-      id: '3',
-      user_id: 'user-1',
-      request_type: 'REMOTE',
-      period_type: 'FULL_DAY',
-      start_date: '2025-07-31',
-      end_date: '2025-07-31',
-      reason: 'Work from home',
-      status: 'PENDING',
-      created_at: '2025-07-27T00:00:00Z',
-      updated_at: '2025-07-27T00:00:00Z',
-    },
-  ];
+  const { data: requestsData, isLoading } = useQuery({
+    queryKey: ['my-requests', filters],
+    queryFn: () => apiClient.getMyRequests(filters),
+  });
+
+  const requests = requestsData?.data || [];
 
   const { openCreateModal } = useRequestModalStore();
   const hasSelection = selectedDates.length > 0;
@@ -112,8 +80,6 @@ export function RequestsCalendar({
     onDateSelect([]);
   };
 
-  // This function is now for the 4-state toggle interaction if we keep it.
-  // For now, it will open the modal directly.
   const handleDateInteraction = (date: Date, mode: string) => {
     console.log('📅 Date interaction:', {
       date: date.toISOString().split('T')[0],
@@ -123,26 +89,35 @@ export function RequestsCalendar({
     openCreateModal('OFF', mode, [date]);
   };
 
-  
+  // This is the new handler for multi-selection
+  const handleDaySelect = (date: Date) => {
+    const newSelectedDates = selectedDates.some(
+      (selectedDate) => selectedDate.getTime() === date.getTime(),
+    )
+      ? selectedDates.filter(
+          (selectedDate) => selectedDate.getTime() !== date.getTime(),
+        )
+      : [...selectedDates, date];
+    onDateSelect(newSelectedDates);
+  };
 
   return (
     <div className="w-full space-y-4">
       {/* Selection Summary */}
       {hasSelection && (
-        <Alert className="border-blue-200 bg-blue-50">
+        <Alert variant={"default"}>
           <AlertDescription>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <div>
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''}{' '}
-                  selected
+                <span className="text-sm font-medium text-white">
+                  {selectedDates.length} date
+                  {selectedDates.length > 1 ? 's' : ''} selected
                 </span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleClearSelection}
-                className="text-blue-600 hover:text-blue-800"
               >
                 Clear selection
               </Button>
@@ -198,7 +173,6 @@ export function RequestsCalendar({
           <Calendar
             mode="multiple"
             selected={selectedDates}
-            onSelect={onDateSelect}
             month={calendarDate}
             onMonthChange={(month) => {
               onFiltersChange({
@@ -208,34 +182,35 @@ export function RequestsCalendar({
               });
             }}
             className="w-full"
-            classNames={{
-              months:
-                'flex w-full flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-              month: 'space-y-4 w-full flex flex-col',
-              caption: 'flex justify-center pt-1 relative items-center hidden', // Hide default navigation
-              caption_label: 'text-lg font-semibold',
-              nav: 'space-x-1 flex items-center hidden', // Hide default navigation
-              nav_button:
-                'h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100',
-              nav_button_previous: 'absolute left-1',
-              nav_button_next: 'absolute right-1',
-              table: 'w-full border-collapse space-y-1',
-              head_row: 'flex w-full',
-              head_cell:
-                'text-gray-500 rounded-md w-full font-normal text-[0.8rem] text-center p-2',
-              row: 'flex w-full mt-2',
-              cell: 'relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent w-full',
-              day: 'h-24 w-full p-0 font-normal aria-selected:opacity-100',
-              day_selected:
-                'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-              day_today: 'bg-accent text-accent-foreground',
-              day_outside: 'text-gray-400 opacity-50',
-              day_disabled: 'text-gray-400 opacity-50',
-              day_range_middle:
-                'aria-selected:bg-accent aria-selected:text-accent-foreground',
-              day_hidden: 'invisible',
+            components={{
+              Day: ({ day: { date: dayDate } }) => {
+                const isSelected = selectedDates.some(
+                  (d) => d.getTime() === dayDate.getTime(),
+                );
+                const requestsForDay = requests.filter(
+                  (r) =>
+                    new Date(r.start_date).toDateString() ===
+                    dayDate.toDateString(),
+                );
+
+                return (
+                  <RequestCalendarDay
+                    date={dayDate}
+                    cellState={{
+                      requests: requestsForDay,
+                      isSelected: isSelected,
+                      mode: 'FULL_DAY', // Default mode
+                      hasConflict: false, // Placeholder
+                    }}
+                    isCurrentMonth={isSameMonth(dayDate, calendarDate)}
+                    onDateClick={handleDateInteraction}
+                    onRequestClick={onRequestClick}
+                    onToggleMode={() => 'FULL_DAY'} // Placeholder
+                    onDateSelect={() => handleDaySelect(dayDate)}
+                  />
+                );
+              },
             }}
-            
           />
         </CardContent>
       </Card>
@@ -243,7 +218,7 @@ export function RequestsCalendar({
       {/* Calendar Legend */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-6 text-sm text-gray-600 flex-wrap">
+          <div className="flex items-center gap-6 text-sm text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <Badge variant="destructive" className="w-3 h-3 p-0"></Badge>
               <span>Off Request</span>
@@ -257,15 +232,15 @@ export function RequestsCalendar({
               <span>Onsite Request</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gray-50 rounded border border-gray-300"></div>
+              <div className="w-3 h-3 rounded border border-yellow-300 bg-yellow-500/20"></div>
               <span>Pending</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-50 rounded border border-green-300"></div>
+              <div className="w-3 h-3 rounded border border-green-300 bg-green-500/20"></div>
               <span>Approved</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-50 rounded border border-red-300"></div>
+              <div className="w-3 h-3 rounded border border-red-300 bg-red-500/20"></div>
               <span>Rejected</span>
             </div>
           </div>

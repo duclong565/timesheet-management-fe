@@ -9,6 +9,8 @@ import { RequestActions } from './components/request-actions';
 import { RequestModals } from './components/request-modals';
 import { useRequestModalStore } from '@/stores/request-modal-store';
 import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 // import { useAuth } from '@/contexts/auth-context'; // TODO: Use for authentication in Phase 3
 import type {
   RequestFilters as RequestFiltersType,
@@ -24,9 +26,24 @@ export default function RequestsPage() {
     month: new Date().getMonth() + 1, // 1-based month
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  useRequestModalStore();
+  const queryClient = useQueryClient();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+
+  const { closeAllModals } = useRequestModalStore();
+
+  const createRequestMutation = useMutation({
+    mutationFn: (data: CreateRequestDto) => apiClient.createRequest(data),
+    onSuccess: () => {
+      toast.success('Request submitted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+      setSelectedDates([]); // Clear selected dates after successful submission
+      closeAllModals();
+    },
+    onError: (error) => {
+      console.error('Request submission failed:', error);
+      toast.error('Failed to submit request. Please try again.');
+    },
+  });
 
   // Handle filter changes
   const handleFiltersChange = (newFilters: RequestFiltersType) => {
@@ -60,24 +77,7 @@ export default function RequestsPage() {
 
   // Handle request submission
   const handleRequestSubmit = async (data: CreateRequestDto) => {
-    setIsSubmitting(true);
-
-    try {
-      console.log('🚀 Submitting request:', data);
-
-      // TODO: Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API call
-
-      toast.success('Request submitted successfully!');
-
-      // TODO: Refresh calendar data
-    } catch (error) {
-      console.error('Request submission failed:', error);
-      toast.error('Failed to submit request. Please try again.');
-      throw error; // Re-throw to prevent modal from closing
-    } finally {
-      setIsSubmitting(false);
-    }
+    await createRequestMutation.mutateAsync(data);
   };
 
   return (
@@ -111,7 +111,10 @@ export default function RequestsPage() {
       />
 
       {/* Modals */}
-      <RequestModals onSubmit={handleRequestSubmit} isLoading={isSubmitting} />
+      <RequestModals
+        onSubmit={handleRequestSubmit}
+        isLoading={createRequestMutation.isPending}
+      />
     </div>
   );
 }

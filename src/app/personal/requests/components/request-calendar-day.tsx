@@ -27,9 +27,9 @@ const REQUEST_TYPE_COLORS = {
 } as const;
 
 const STATUS_STYLES = {
-  PENDING: 'bg-gray-50 border-gray-200',
-  APPROVED: 'bg-green-50 border-green-200',
-  REJECTED: 'bg-red-50 border-red-200',
+  PENDING: 'bg-yellow-500/20 text-yellow-800 dark:text-yellow-300',
+  APPROVED: 'bg-green-500/20 text-green-800 dark:text-green-300',
+  REJECTED: 'bg-red-500/20 text-red-800 dark:text-red-300',
 };
 
 export const RequestCalendarDay = forwardRef<
@@ -63,12 +63,6 @@ export const RequestCalendarDay = forwardRef<
       if (onDateSelect) {
         onDateSelect(date);
       }
-
-      // If not holding a modifier key for multi-select, also toggle the mode.
-      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        const newMode = onToggleMode(date);
-        onDateClick(date, newMode);
-      }
     };
 
     // Handle request click
@@ -80,7 +74,7 @@ export const RequestCalendarDay = forwardRef<
     // Determine background style based on status and selection
     const getBackgroundStyle = () => {
       if (cellState.isSelected) {
-        return 'bg-blue-100 border-blue-300 ring-2 ring-blue-200';
+        return 'bg-accent text-accent-foreground';
       }
 
       // If there are requests, use the first request's status for background
@@ -88,11 +82,11 @@ export const RequestCalendarDay = forwardRef<
         const firstRequest = cellState.requests[0];
         return (
           STATUS_STYLES[firstRequest.status as keyof typeof STATUS_STYLES] ||
-          'bg-white'
+          'bg-transparent'
         );
       }
 
-      return 'bg-white';
+      return 'bg-transparent';
     };
 
     // Determine if day should be interactive
@@ -103,7 +97,7 @@ export const RequestCalendarDay = forwardRef<
         ref={ref}
         className={cn(
           'relative h-full w-full p-0',
-          !isCurrentMonth && 'bg-gray-50',
+          !isCurrentMonth && 'bg-muted/50',
           className,
         )}
         {...props}
@@ -113,13 +107,13 @@ export const RequestCalendarDay = forwardRef<
           tabIndex={isInteractive ? 0 : -1}
           className={cn(
             'relative flex h-full min-h-[120px] w-full flex-col items-start justify-start p-2 text-left',
-            'border border-gray-200 rounded-none',
+            'border rounded-none',
             isInteractive
-              ? 'cursor-pointer hover:bg-gray-50'
+              ? 'cursor-pointer hover:bg-accent/50'
               : 'cursor-default',
             getBackgroundStyle(),
-            isCurrentDay && 'ring-2 ring-blue-500',
-            !isCurrentMonth && 'text-gray-400',
+            isCurrentDay && 'ring-2 ring-primary',
+            !isCurrentMonth && 'text-muted-foreground',
             'transition-all duration-200',
           )}
           onClick={isInteractive ? handleDayClick : undefined}
@@ -136,8 +130,8 @@ export const RequestCalendarDay = forwardRef<
             <span
               className={cn(
                 'text-sm font-medium',
-                isCurrentDay && 'font-bold text-blue-600',
-                !isCurrentMonth && 'text-gray-400',
+                isCurrentDay && 'font-bold text-primary',
+                !isCurrentMonth && 'text-muted-foreground',
               )}
             >
               {dayNumber}
@@ -147,7 +141,7 @@ export const RequestCalendarDay = forwardRef<
             {cellState.mode !== 'FULL_DAY' && isCurrentMonth && (
               <Badge
                 variant="outline"
-                className="h-4 px-1 text-xs bg-white/80 border-gray-300"
+                className="h-4 px-1 text-xs bg-background/80 border-border"
               >
                 {cellState.mode === 'MORNING'
                   ? 'AM'
@@ -189,12 +183,12 @@ export const RequestCalendarDay = forwardRef<
 
           {/* Conflict indicator */}
           {cellState.hasConflict && (
-            <div className="absolute top-1 left-1 w-2 h-2 bg-red-500 rounded-full shadow-sm" />
+            <div className="absolute top-1 left-1 w-2 h-2 bg-destructive rounded-full shadow-sm" />
           )}
 
           {/* Selection indicator */}
           {cellState.isSelected && (
-            <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full shadow-sm" />
+            <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full shadow-sm" />
           )}
         </div>
       </td>

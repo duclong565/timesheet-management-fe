@@ -14,10 +14,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, Loader2 } from 'lucide-react';
 import { BaseRequestModal } from './base-request-modal';
 import { useRequestModalStore } from '@/stores/request-modal-store';
 import type { CreateRequestDto, AbsenceType } from '@/types/requests';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 
 // Validation schema
 const offRequestSchema = z.object({
@@ -27,40 +29,6 @@ const offRequestSchema = z.object({
 });
 
 type OffRequestFormData = z.infer<typeof offRequestSchema>;
-
-// Mock absence types - TODO: Replace with API call
-const mockAbsenceTypes: AbsenceType[] = [
-  {
-    id: '1',
-    name: 'Annual Leave',
-    description: 'Paid annual vacation time',
-    is_active: true,
-  },
-  {
-    id: '2',
-    name: 'Sick Leave',
-    description: 'Medical leave for illness',
-    is_active: true,
-  },
-  {
-    id: '3',
-    name: 'Personal Leave',
-    description: 'Unpaid personal time off',
-    is_active: true,
-  },
-  {
-    id: '4',
-    name: 'Family Emergency',
-    description: 'Emergency family situations',
-    is_active: true,
-  },
-  {
-    id: '5',
-    name: 'Maternity/Paternity',
-    description: 'Parental leave for new parents',
-    is_active: true,
-  },
-];
 
 interface OffRequestModalProps {
   isOpen: boolean;
@@ -84,7 +52,12 @@ export function OffRequestModal({
     isEditModalOpen,
   } = useRequestModalStore();
 
-  const [absenceTypes] = useState<AbsenceType[]>(mockAbsenceTypes);
+  const { data: absenceTypesData, isLoading: isLoadingAbsenceTypes } = useQuery({
+    queryKey: ['absence-types'],
+    queryFn: () => apiClient.getAbsenceTypes(),
+  });
+
+  const absenceTypes = absenceTypesData?.data || [];
 
   const {
     register,
@@ -188,16 +161,16 @@ export function OffRequestModal({
       requestType={activeRequestType}
       periodType={activePeriodType}
       selectedDates={selectedDates}
-      isLoading={isLoading}
-      canSubmit={isValid}
+      isLoading={isLoading || isLoadingAbsenceTypes}
+      canSubmit={isValid && !isLoadingAbsenceTypes}
       onSubmit={handleSubmit(onFormSubmit)}
       submitText={isEditModalOpen ? 'Update Request' : 'Submit Request'}
       showDeleteButton={isEditModalOpen}
     >
       <form className="space-y-6">
         {/* Days Summary */}
-        <Alert className="bg-blue-50 border-blue-200 text-blue-800">
-          <Info className="h-5 w-5 text-blue-600" />
+        <Alert>
+          <Info className="h-5 w-5" />
           <AlertDescription className="font-medium">
             You are requesting{' '}
             <strong className="font-bold">
@@ -215,28 +188,35 @@ export function OffRequestModal({
           <Label htmlFor="absence_type_id" className="text-sm font-medium">
             Absence Type <span className="text-red-500">*</span>
           </Label>
-          <Select
-            value={selectedAbsenceTypeId || ''}
-            onValueChange={(value) => setValue('absence_type_id', value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select absence type" />
-            </SelectTrigger>
-            <SelectContent>
-              {absenceTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{type.name}</span>
-                    {type.description && (
-                      <span className="text-xs text-gray-500">
-                        {type.description}
-                      </span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isLoadingAbsenceTypes ? (
+            <div className="flex items-center justify-center h-10">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="ml-2 text-sm text-muted-foreground">Loading absence types...</span>
+            </div>
+          ) : (
+            <Select
+              value={selectedAbsenceTypeId || ''}
+              onValueChange={(value) => setValue('absence_type_id', value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select absence type" />
+              </SelectTrigger>
+              <SelectContent>
+                {absenceTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{type.name}</span>
+                      {type.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {type.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {errors.absence_type_id && (
             <p className="text-sm text-red-500">
               {errors.absence_type_id.message}
@@ -246,14 +226,14 @@ export function OffRequestModal({
 
         {/* Selected Absence Type Info */}
         {selectedAbsenceType && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-900">
+          <Alert variant="info">
+            <h4 className="font-medium">
               {selectedAbsenceType.name}
             </h4>
-            <p className="text-sm text-blue-700 mt-1">
+            <AlertDescription className="text-sm mt-1">
               {selectedAbsenceType.description}
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Reason Field */}

@@ -485,6 +485,10 @@ class ApiClient {
     return this.post<ApiResponse<Request>>('/requests/response', responseData);
   }
 
+  async getMyRequests(query?: RequestQuery): Promise<PaginatedResponse<Request>> {
+    return this.get<PaginatedResponse<Request>>('/requests/my-requests', query);
+  }
+
   async getTeamCalendar(query?: BaseQuery): Promise<ApiResponse<unknown>> {
     return this.get<ApiResponse<unknown>>('/requests/team-calendar', query);
   }
@@ -548,8 +552,8 @@ class ApiClient {
   // SETTINGS ENDPOINTS
   // ====================================
 
-  async getAbsenceTypes(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/absence-types');
+  async getAbsenceTypes(query?: BaseQuery): Promise<PaginatedResponse<unknown>> {
+    return this.get<PaginatedResponse<unknown>>('/absence-types', query);
   }
 
   async getBranches(): Promise<PaginatedResponse<unknown>> {
