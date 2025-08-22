@@ -26,6 +26,7 @@ import {
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
+  BackgroundJob,
   AuditLog,
   Position,
   Capability,
@@ -809,6 +810,14 @@ class ApiClient {
     return this.get<ApiResponse<TimesheetComplaint[]>>(
       `/timesheet-complaints/timesheet/${timesheetId}`,
     );
+  }
+
+  // ====================================
+  // BACKGROUND JOB ENDPOINTS
+  // ====================================
+
+  async getBackgroundJobs(query?: BaseQuery): Promise<PaginatedResponse<BackgroundJob>> {
+    return this.get<PaginatedResponse<BackgroundJob>>('/background-jobs', query);
   }
 
   // ====================================
