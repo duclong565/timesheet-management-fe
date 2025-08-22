@@ -21,6 +21,7 @@ import {
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
+  AuditLog,
 } from '@/types';
 import type {
   TeamCalendarData,
@@ -590,8 +591,8 @@ class ApiClient {
   // AUDIT LOG ENDPOINTS
   // ====================================
 
-  async getAuditLogs(query?: BaseQuery): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/audit-logs', query);
+  async getAuditLogs(query?: BaseQuery): Promise<PaginatedResponse<AuditLog>> {
+    return this.get<PaginatedResponse<AuditLog>>('/audit-logs', query);
   }
 
   // ====================================
