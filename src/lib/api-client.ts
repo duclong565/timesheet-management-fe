@@ -13,6 +13,7 @@ import {
   CreateRequestDto,
   RequestQuery,
   Project,
+  Client,
   Task,
   TaskQuery,
   WorkingTime,
@@ -59,6 +60,11 @@ interface TaskData {
   project_id?: string;
   is_billable?: boolean;
   description?: string;
+}
+
+interface ClientData {
+  client_name: string;
+  contact_info?: string;
 }
 
 interface WorkingTimeData {
@@ -617,12 +623,40 @@ class ApiClient {
     return this.get<PaginatedResponse<unknown>>('/capabilities');
   }
 
+
   async getClients(): Promise<PaginatedResponse<unknown>> {
     return this.get<PaginatedResponse<unknown>>('/clients');
   }
 
   async getRoles(): Promise<PaginatedResponse<Role>> {
     return this.get<PaginatedResponse<Role>>('/roles');
+  }
+
+  // ====================================
+  // CLIENT ENDPOINTS
+  // ====================================
+
+  async getClients(query?: BaseQuery): Promise<PaginatedResponse<Client>> {
+    return this.get<PaginatedResponse<Client>>('/clients', query);
+  }
+
+  async getClient(id: string): Promise<ApiResponse<Client>> {
+    return this.get<ApiResponse<Client>>(`/clients/${id}`);
+  }
+
+  async createClient(clientData: ClientData): Promise<ApiResponse<Client>> {
+    return this.post<ApiResponse<Client>>('/clients', clientData);
+  }
+
+  async updateClient(
+    id: string,
+    clientData: Partial<Client>,
+  ): Promise<ApiResponse<Client>> {
+    return this.patch<ApiResponse<Client>>(`/clients/${id}`, clientData);
+  }
+
+  async deleteClient(id: string): Promise<ApiResponse<void>> {
+    return this.delete<ApiResponse<void>>(`/clients/${id}`);
   }
 
   // ====================================
@@ -702,7 +736,11 @@ class ApiClient {
 // ====================================
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public data?: unknown) {
+  constructor(
+    message: string,
+    public status: number,
+    public data?: unknown,
+  ) {
     super(message);
     this.name = 'ApiError';
   }
