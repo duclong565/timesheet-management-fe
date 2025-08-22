@@ -29,6 +29,7 @@ import type {
   TeamCalendarData,
   TeamCalendarQuery,
 } from '@/types/team-calendar';
+import type { AbsenceType } from '@/types/requests';
 import { toast } from 'sonner';
 
 interface PasswordChangeData {
@@ -94,6 +95,12 @@ interface ProfileData {
   phone?: string;
   address?: string;
   sex?: 'MALE' | 'FEMALE' | 'OTHER';
+}
+
+interface AbsenceTypeInput {
+  name: string;
+  description?: string;
+  is_active?: boolean;
 }
 
 // Safe localStorage utility for SSR compatibility
@@ -608,8 +615,25 @@ class ApiClient {
 
   async getAbsenceTypes(
     query?: BaseQuery,
-  ): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/absence-types', query);
+  ): Promise<PaginatedResponse<AbsenceType>> {
+    return this.get<PaginatedResponse<AbsenceType>>('/absence-types', query);
+  }
+
+  async createAbsenceType(
+    data: AbsenceTypeInput,
+  ): Promise<ApiResponse<AbsenceType>> {
+    return this.post<ApiResponse<AbsenceType>>('/absence-types', data);
+  }
+
+  async updateAbsenceType(
+    id: string,
+    data: AbsenceTypeInput,
+  ): Promise<ApiResponse<AbsenceType>> {
+    return this.put<ApiResponse<AbsenceType>>(`/absence-types/${id}`, data);
+  }
+
+  async deleteAbsenceType(id: string): Promise<ApiResponse<void>> {
+    return this.delete<ApiResponse<void>>(`/absence-types/${id}`);
   }
 
   async getBranches(): Promise<PaginatedResponse<Branch>> {
