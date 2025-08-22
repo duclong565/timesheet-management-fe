@@ -21,6 +21,9 @@ import {
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
+  Position,
+  Capability,
+  CapabilitySetting,
 } from '@/types';
 import type {
   TeamCalendarData,
@@ -608,12 +611,32 @@ class ApiClient {
     return this.get<PaginatedResponse<unknown>>('/branches');
   }
 
-  async getPositions(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/positions');
+  async getPositions(): Promise<PaginatedResponse<Position>> {
+    return this.get<PaginatedResponse<Position>>('/positions');
   }
 
-  async getCapabilities(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/capabilities');
+  async getCapabilities(): Promise<PaginatedResponse<Capability>> {
+    return this.get<PaginatedResponse<Capability>>('/capabilities');
+  }
+
+  async getCapabilitySettings(
+    query?: BaseQuery,
+  ): Promise<PaginatedResponse<CapabilitySetting>> {
+    return this.get<PaginatedResponse<CapabilitySetting>>(
+      '/capability-settings',
+      query,
+    );
+  }
+
+  async createCapabilitySetting(data: {
+    position_id: string;
+    capability_id: string;
+    coefficient?: number;
+  }): Promise<ApiResponse<CapabilitySetting>> {
+    return this.post<ApiResponse<CapabilitySetting>>(
+      '/capability-settings',
+      data,
+    );
   }
 
   async getClients(): Promise<PaginatedResponse<unknown>> {
