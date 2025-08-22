@@ -7,6 +7,7 @@ import {
   Timesheet,
   CreateTimesheetDto,
   TimesheetQuery,
+  TimesheetComplaint,
   Request,
   CreateRequestDto,
   RequestQuery,
@@ -268,6 +269,11 @@ class ApiClient {
     return this.get<User>('/auth/profile');
   }
 
+  async googleLogin(): Promise<void> {
+    // Redirect to Google OAuth
+    window.location.href = `${this.baseURL}/auth/google`;
+  }
+
   async logout(): Promise<void> {
     this.clearToken();
   }
@@ -292,16 +298,24 @@ class ApiClient {
   }
 
   async updateProfile(profileData: ProfileData): Promise<ApiResponse<User>> {
-    return this.patch<ApiResponse<User>>('/users/profile', profileData);
+    return this.patch<ApiResponse<User>>('/users/me', profileData);
   }
 
   async changePassword(
     passwordData: PasswordChangeData,
   ): Promise<ApiResponse<void>> {
     return this.patch<ApiResponse<void>>(
-      '/users/change-password',
+      '/users/me/change-password',
       passwordData,
     );
+  }
+
+  async getUserStats(): Promise<ApiResponse<any>> {
+    return this.get<ApiResponse<any>>('/users/stats');
+  }
+
+  async getCurrentUser(): Promise<ApiResponse<User>> {
+    return this.get<ApiResponse<User>>('/users/me');
   }
 
   // ====================================
@@ -489,7 +503,9 @@ class ApiClient {
     return this.post<ApiResponse<Request>>('/requests/response', responseData);
   }
 
-  async getMyRequests(query?: RequestQuery): Promise<PaginatedResponse<Request>> {
+  async getMyRequests(
+    query?: RequestQuery,
+  ): Promise<PaginatedResponse<Request>> {
     return this.get<PaginatedResponse<Request>>('/requests/my-requests', query);
   }
 
@@ -498,6 +514,15 @@ class ApiClient {
   ): Promise<ApiResponse<TeamCalendarData>> {
     return this.get<ApiResponse<TeamCalendarData>>(
       '/requests/team-calendar',
+      query,
+    );
+  }
+
+  async getPendingRequests(
+    query?: RequestQuery,
+  ): Promise<PaginatedResponse<Request>> {
+    return this.get<PaginatedResponse<Request>>(
+      '/requests/pending-requests',
       query,
     );
   }
@@ -539,6 +564,10 @@ class ApiClient {
     return this.delete<ApiResponse<void>>(`/working-times/${id}`);
   }
 
+  async getCurrentWorkingTime(): Promise<ApiResponse<WorkingTime>> {
+    return this.get<ApiResponse<WorkingTime>>('/working-times/my-current');
+  }
+
   // ====================================
   // DASHBOARD ENDPOINTS
   // ====================================
@@ -547,6 +576,14 @@ class ApiClient {
     query?: BaseQuery,
   ): Promise<ApiResponse<DashboardResponse>> {
     return this.get<ApiResponse<DashboardResponse>>('/dashboard', query);
+  }
+
+  async getQuickStats(): Promise<ApiResponse<any>> {
+    return this.get<ApiResponse<any>>('/dashboard/quick-stats');
+  }
+
+  async getPendingSummary(): Promise<ApiResponse<any>> {
+    return this.get<ApiResponse<any>>('/dashboard/pending-summary');
   }
 
   // ====================================
@@ -561,7 +598,9 @@ class ApiClient {
   // SETTINGS ENDPOINTS
   // ====================================
 
-  async getAbsenceTypes(query?: BaseQuery): Promise<PaginatedResponse<unknown>> {
+  async getAbsenceTypes(
+    query?: BaseQuery,
+  ): Promise<PaginatedResponse<unknown>> {
     return this.get<PaginatedResponse<unknown>>('/absence-types', query);
   }
 
@@ -596,12 +635,12 @@ class ApiClient {
     has_punishment?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<any>> {
+  }): Promise<PaginatedResponse<Timesheet>> {
     const params = {
       ...query,
       has_punishment: true, // Always filter for punishment records
     };
-    return this.get<PaginatedResponse<any>>('/timesheets', params);
+    return this.get<PaginatedResponse<Timesheet>>('/timesheets', params);
   }
 
   // ====================================
@@ -611,8 +650,11 @@ class ApiClient {
   async createComplaint(complaintData: {
     timesheet_id: string;
     complain: string;
-  }): Promise<ApiResponse<any>> {
-    return this.post<ApiResponse<any>>('/timesheet-complaints', complaintData);
+  }): Promise<ApiResponse<TimesheetComplaint>> {
+    return this.post<ApiResponse<TimesheetComplaint>>(
+      '/timesheet-complaints',
+      complaintData,
+    );
   }
 
   async getComplaints(query?: {
@@ -620,21 +662,27 @@ class ApiClient {
     status?: string;
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<any>> {
-    return this.get<PaginatedResponse<any>>('/timesheet-complaints', query);
+  }): Promise<PaginatedResponse<TimesheetComplaint>> {
+    return this.get<PaginatedResponse<TimesheetComplaint>>(
+      '/timesheet-complaints',
+      query,
+    );
   }
 
   async updateComplaint(
     id: string,
     data: { complain: string },
-  ): Promise<ApiResponse<any>> {
-    return this.patch<ApiResponse<any>>(`/timesheet-complaints/${id}`, data);
+  ): Promise<ApiResponse<TimesheetComplaint>> {
+    return this.patch<ApiResponse<TimesheetComplaint>>(
+      `/timesheet-complaints/${id}`,
+      data,
+    );
   }
 
   async getComplaintsByTimesheet(
     timesheetId: string,
-  ): Promise<ApiResponse<any>> {
-    return this.get<ApiResponse<any>>(
+  ): Promise<ApiResponse<TimesheetComplaint[]>> {
+    return this.get<ApiResponse<TimesheetComplaint[]>>(
       `/timesheet-complaints/timesheet/${timesheetId}`,
     );
   }
