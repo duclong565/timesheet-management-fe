@@ -15,6 +15,8 @@ export interface Request {
   time_type?: TimeType; // For TIME requests
   reason: string;
   absence_type_id?: string; // For OFF requests
+  project_id?: string; // For REMOTE/ONSITE requests
+  location?: string; // For ONSITE requests
   note?: string;
   status: RequestStatus;
   approved_by_id?: string;
@@ -34,6 +36,8 @@ export interface CreateRequestDto {
   time_type?: TimeType;
   reason: string;
   absence_type_id?: string;
+  project_id?: string;
+  location?: string;
   note?: string;
 }
 
@@ -43,6 +47,8 @@ export interface UpdateRequestDto {
   start_time?: string;
   end_time?: string;
   time_type?: TimeType;
+  project_id?: string;
+  location?: string;
 }
 
 export interface RequestQuery {

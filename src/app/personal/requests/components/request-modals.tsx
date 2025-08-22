@@ -3,6 +3,8 @@
 import { useRequestModalStore } from '@/stores/request-modal-store';
 import { OffRequestModal } from './modals/off-request-modal';
 import { TimeRequestModal } from './modals/time-request-modal';
+import { RemoteRequestModal } from './modals/remote-request-modal';
+import { OnsiteRequestModal } from './modals/onsite-request-modal';
 import type { CreateRequestDto } from '@/types/requests';
 
 interface RequestModalsProps {
@@ -65,33 +67,27 @@ export function RequestModals({
     );
   }
 
-  // For REMOTE requests - TODO: Implement RemoteRequestModal
+  // For REMOTE requests
   if (isModalOpen && activeRequestType === 'REMOTE') {
     return (
-      <div>
-        {/* TODO: Implement RemoteRequestModal */}
-        <OffRequestModal
-          isOpen={isModalOpen}
-          onClose={handleModalClose}
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-        />
-      </div>
+      <RemoteRequestModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+      />
     );
   }
 
-  // For ONSITE requests - TODO: Implement OnsiteRequestModal
+  // For ONSITE requests
   if (isModalOpen && activeRequestType === 'ONSITE') {
     return (
-      <div>
-        {/* TODO: Implement OnsiteRequestModal */}
-        <OffRequestModal
-          isOpen={isModalOpen}
-          onClose={handleModalClose}
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-        />
-      </div>
+      <OnsiteRequestModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+      />
     );
   }
 

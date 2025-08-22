@@ -29,6 +29,9 @@ export type {
   TeamCalendarDay,
   TeamCalendarUser,
   TeamCalendarQuery,
+  TeamCalendarFilters,
+  RequestStatus,
+  RequestType,
 } from '@/types/team-calendar';
 
 export {

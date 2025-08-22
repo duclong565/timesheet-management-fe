@@ -137,7 +137,7 @@ export const mainNavItems: NavItem[] = [
       },
       {
         title: 'Team working calendar',
-        url: '/personal/team-calendar',
+        url: '/team/calendar',
         icon: CalendarDays,
       },
       {

@@ -31,9 +31,29 @@ export interface TeamCalendarData {
   users: TeamCalendarUser[];
 }
 
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
+export type RequestType = 'OFF' | 'REMOTE' | 'ONSITE' | 'ALL';
+
 export interface TeamCalendarQuery {
+  // Required filters
   month: number;
   year: number;
+
+  // Optional filters matching backend
+  status?: RequestStatus;
+  requestType?: RequestType;
   projectId?: string;
   branchId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TeamCalendarFilters {
+  year: number;
+  month: number;
+  status: RequestStatus;
+  requestType: RequestType;
+  projectId?: string;
+  search?: string;
 }
