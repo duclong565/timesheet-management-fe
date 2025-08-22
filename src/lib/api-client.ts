@@ -15,6 +15,7 @@ import {
   Task,
   TaskQuery,
   WorkingTime,
+  Branch,
   DashboardResponse,
   UserQuery,
   BaseQuery,
@@ -604,8 +605,8 @@ class ApiClient {
     return this.get<PaginatedResponse<unknown>>('/absence-types', query);
   }
 
-  async getBranches(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/branches');
+  async getBranches(): Promise<PaginatedResponse<Branch>> {
+    return this.get<PaginatedResponse<Branch>>('/branches');
   }
 
   async getPositions(): Promise<PaginatedResponse<unknown>> {
