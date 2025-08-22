@@ -1,5 +1,6 @@
 import {
   User,
+  Role,
   AuthResponse,
   LoginCredentials,
   ApiResponse,
@@ -12,13 +13,16 @@ import {
   CreateRequestDto,
   RequestQuery,
   Project,
+  Client,
   Task,
   TaskQuery,
   WorkingTime,
   Capability,
+  Branch,
   DashboardResponse,
   UserQuery,
   BaseQuery,
+  Position,
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
@@ -27,6 +31,7 @@ import type {
   TeamCalendarData,
   TeamCalendarQuery,
 } from '@/types/team-calendar';
+import type { AbsenceType } from '@/types/requests';
 import { toast } from 'sonner';
 
 interface PasswordChangeData {
@@ -61,6 +66,11 @@ interface TaskData {
   description?: string;
 }
 
+interface ClientData {
+  client_name: string;
+  contact_info?: string;
+}
+
 interface WorkingTimeData {
   morning_start_at: string;
   morning_end_at: string;
@@ -93,6 +103,12 @@ interface ProfileData {
   phone?: string;
   address?: string;
   sex?: 'MALE' | 'FEMALE' | 'OTHER';
+}
+
+interface AbsenceTypeInput {
+  name: string;
+  description?: string;
+  is_active?: boolean;
 }
 
 // Safe localStorage utility for SSR compatibility
@@ -607,16 +623,35 @@ class ApiClient {
 
   async getAbsenceTypes(
     query?: BaseQuery,
-  ): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/absence-types', query);
+  ): Promise<PaginatedResponse<AbsenceType>> {
+    return this.get<PaginatedResponse<AbsenceType>>('/absence-types', query);
   }
 
-  async getBranches(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/branches');
+  async createAbsenceType(
+    data: AbsenceTypeInput,
+  ): Promise<ApiResponse<AbsenceType>> {
+    return this.post<ApiResponse<AbsenceType>>('/absence-types', data);
   }
 
-  async getPositions(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/positions');
+  async updateAbsenceType(
+    id: string,
+    data: AbsenceTypeInput,
+  ): Promise<ApiResponse<AbsenceType>> {
+    return this.put<ApiResponse<AbsenceType>>(`/absence-types/${id}`, data);
+  }
+
+  async deleteAbsenceType(id: string): Promise<ApiResponse<void>> {
+    return this.delete<ApiResponse<void>>(`/absence-types/${id}`);
+  }
+
+  async getBranches(): Promise<PaginatedResponse<Branch>> {
+    return this.get<PaginatedResponse<Branch>>('/branches');
+  }
+
+  async getPositions(
+    query?: BaseQuery,
+  ): Promise<PaginatedResponse<Position>> {
+    return this.get<PaginatedResponse<Position>>('/positions', query);
   }
 
   async getCapabilities(
@@ -645,12 +680,40 @@ class ApiClient {
     return this.delete<ApiResponse<void>>(`/capabilities/${id}`);
   }
 
+
   async getClients(): Promise<PaginatedResponse<unknown>> {
     return this.get<PaginatedResponse<unknown>>('/clients');
   }
 
-  async getRoles(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/roles');
+  async getRoles(): Promise<PaginatedResponse<Role>> {
+    return this.get<PaginatedResponse<Role>>('/roles');
+  }
+
+  // ====================================
+  // CLIENT ENDPOINTS
+  // ====================================
+
+  async getClients(query?: BaseQuery): Promise<PaginatedResponse<Client>> {
+    return this.get<PaginatedResponse<Client>>('/clients', query);
+  }
+
+  async getClient(id: string): Promise<ApiResponse<Client>> {
+    return this.get<ApiResponse<Client>>(`/clients/${id}`);
+  }
+
+  async createClient(clientData: ClientData): Promise<ApiResponse<Client>> {
+    return this.post<ApiResponse<Client>>('/clients', clientData);
+  }
+
+  async updateClient(
+    id: string,
+    clientData: Partial<Client>,
+  ): Promise<ApiResponse<Client>> {
+    return this.patch<ApiResponse<Client>>(`/clients/${id}`, clientData);
+  }
+
+  async deleteClient(id: string): Promise<ApiResponse<void>> {
+    return this.delete<ApiResponse<void>>(`/clients/${id}`);
   }
 
   // ====================================
@@ -730,7 +793,11 @@ class ApiClient {
 // ====================================
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public data?: unknown) {
+  constructor(
+    message: string,
+    public status: number,
+    public data?: unknown,
+  ) {
     super(message);
     this.name = 'ApiError';
   }
