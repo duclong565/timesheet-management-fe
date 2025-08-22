@@ -21,6 +21,7 @@ import {
   DashboardResponse,
   UserQuery,
   BaseQuery,
+  Position,
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
@@ -640,8 +641,10 @@ class ApiClient {
     return this.get<PaginatedResponse<Branch>>('/branches');
   }
 
-  async getPositions(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/positions');
+  async getPositions(
+    query?: BaseQuery,
+  ): Promise<PaginatedResponse<Position>> {
+    return this.get<PaginatedResponse<Position>>('/positions', query);
   }
 
   async getCapabilities(): Promise<PaginatedResponse<unknown>> {
