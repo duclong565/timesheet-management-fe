@@ -17,6 +17,7 @@ import {
   Task,
   TaskQuery,
   WorkingTime,
+  Capability,
   Branch,
   DashboardResponse,
   UserQuery,
@@ -76,6 +77,12 @@ interface WorkingTimeData {
   afternoon_start_at: string;
   afternoon_end_at: string;
   apply_date: string;
+}
+
+interface CapabilityData {
+  capability_name: string;
+  type: 'Point' | 'Text';
+  note?: string;
 }
 
 interface TimesheetResponseData {
@@ -647,8 +654,30 @@ class ApiClient {
     return this.get<PaginatedResponse<Position>>('/positions', query);
   }
 
-  async getCapabilities(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/capabilities');
+  async getCapabilities(
+    query?: BaseQuery,
+  ): Promise<PaginatedResponse<Capability>> {
+    return this.get<PaginatedResponse<Capability>>('/capabilities', query);
+  }
+
+  async createCapability(
+    capabilityData: CapabilityData,
+  ): Promise<ApiResponse<Capability>> {
+    return this.post<ApiResponse<Capability>>('/capabilities', capabilityData);
+  }
+
+  async updateCapability(
+    id: string,
+    capabilityData: Partial<CapabilityData>,
+  ): Promise<ApiResponse<Capability>> {
+    return this.patch<ApiResponse<Capability>>(
+      `/capabilities/${id}`,
+      capabilityData,
+    );
+  }
+
+  async deleteCapability(id: string): Promise<ApiResponse<void>> {
+    return this.delete<ApiResponse<void>>(`/capabilities/${id}`);
   }
 
 
