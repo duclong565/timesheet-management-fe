@@ -1,5 +1,6 @@
 import {
   User,
+  Role,
   AuthResponse,
   LoginCredentials,
   ApiResponse,
@@ -622,8 +623,13 @@ class ApiClient {
     return this.get<PaginatedResponse<unknown>>('/capabilities');
   }
 
-  async getRoles(): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/roles');
+
+  async getClients(): Promise<PaginatedResponse<unknown>> {
+    return this.get<PaginatedResponse<unknown>>('/clients');
+  }
+
+  async getRoles(): Promise<PaginatedResponse<Role>> {
+    return this.get<PaginatedResponse<Role>>('/roles');
   }
 
   // ====================================
