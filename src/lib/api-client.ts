@@ -26,6 +26,7 @@ import {
   WeekSubmission,
   SubmitWeekDto,
   ApproveWeekSubmissionDto,
+  AuditLog,
   Position,
   Capability,
   CapabilitySetting,
@@ -616,8 +617,8 @@ class ApiClient {
   // AUDIT LOG ENDPOINTS
   // ====================================
 
-  async getAuditLogs(query?: BaseQuery): Promise<PaginatedResponse<unknown>> {
-    return this.get<PaginatedResponse<unknown>>('/audit-logs', query);
+  async getAuditLogs(query?: BaseQuery): Promise<PaginatedResponse<AuditLog>> {
+    return this.get<PaginatedResponse<AuditLog>>('/audit-logs', query);
   }
 
   // ====================================
